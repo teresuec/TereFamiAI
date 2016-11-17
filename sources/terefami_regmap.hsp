@@ -1,0 +1,114 @@
+// ########## マップ管理(terefami_regmap.hsp) ##########
+
+#ifndef _REGMAP_FUNC
+
+dir_temp=dir_cur
+chdir "maps"
+
+buf=""
+_maplist=""
+notesel _maps_filename
+dirlist _maps_filename,"*.txt"
+if(strmid(_maps_filename,-1,2)="\n"):_maps_filename=strmid(_maps_filename,0,strlen(_maps_filename)-2)
+_maps_filename="\n"+_maps_filename
+split _maps_filename,"\n",maps_filename
+sdim maps_name,64,stat
+
+maps_name.0="フィールドをランダム選択"
+notesel buf
+repeat length(maps_filename)-1,1
+	noteload maps_filename.cnt
+	noteget maps_name.cnt,0
+loop
+
+chdir dir_temp
+
+#else
+
+// 指定した番号のマップを読み込む
+#deffunc loadmap int p1
+	dim players_startpos,8	// プレイ開始時のプレイヤー初期位置
+	player_returnpos=0		// プレイヤー復帰位置(共通)
+	
+	players_startpos_cur=0
+	
+	notesel buf
+	noteload "maps\\"+maps_filename.p1
+	// マップ全体の大きさを確定
+	map_w=0
+	map_h=0
+	_map_h=0
+	map_d=1
+	repeat notemax-1
+		noteget _buf,cnt+1
+		if(_buf=""){
+			map_d++
+			map_h=max(map_h,_map_h)
+			_map_h=0
+		}else{
+			map_w=max(map_w,strlen(_buf))
+			_map_h++
+		}
+	loop
+	map_h=max(map_h,_map_h)
+	dim mapchips_zall,map_w,map_h,map_d
+	_znow=0
+	map_active_xmin=map_w
+	map_active_xmax=0
+	map_active_ymin=map_h
+	map_active_ymax=0
+	dim map_returnposition,1
+	map_returnposition_num=0
+	repeat notemax-1
+		noteget _buf,cnt+1
+		if(_buf=""):_znow++:continue
+		_cnt=cnt-(map_h+1)*_znow
+		repeat map_w
+			switch strmid(_buf,cnt,1)
+			case "0" // 床
+			case "1"
+			case "2"
+			case "3"
+			case "4"
+			case "5" // 床(通り抜け可)
+			case "6"
+			case "7"
+			case "8"
+			case "9"
+				mapchips_zall.cnt._cnt._znow=int(strmid(_buf,cnt,1))
+				if((MODE_2D=0)|(_znow=map_d/2)){
+					map_active_xmin=min(cnt,map_active_xmin) : map_active_xmax=max(cnt,map_active_xmax)
+					map_active_ymin=min(_cnt,map_active_ymin) : map_active_ymax=max(_cnt,map_active_ymax)
+				}
+				swbreak
+			case "p" // プレイヤー初期位置
+				if(_znow=map_d/2){
+					players_startpos.players_startpos_cur=_cnt*map_w+cnt
+					players_startpos_cur++
+				}
+				mapchips_zall.cnt._cnt._znow=-1
+				swbreak
+			case "P" // プレイヤー復帰位置
+				if(_znow=map_d/2){
+					map_returnpositions.map_returnposition_num=_cnt*map_w+cnt
+					map_returnposition_num++
+				}
+				mapchips_zall.cnt._cnt._znow=-1
+				swbreak
+			default // 空中
+				mapchips_zall.cnt._cnt._znow=-1
+				swbreak
+			swend
+		loop
+	loop
+	map_active_w=map_active_xmax-map_active_xmin
+	map_active_h=map_active_ymax-map_active_ymin
+	dim mapchips,map_w,map_h			// マップチップ
+	dim mapchips_blocktype,map_w*map_h	// 床の種類に変換したマップチップ(各AIに渡すもの)
+	repeat map_w*map_h
+		mapchips.(cnt\map_w).(cnt/map_w)=mapchips_zall.(cnt\map_w).(cnt/map_w).(map_d/2)
+		mapchips_blocktype.cnt=(mapchips.(cnt\map_w).(cnt/map_w)>=0)+(mapchips.(cnt\map_w).(cnt/map_w)>=5)
+	loop
+	return
+
+#endif

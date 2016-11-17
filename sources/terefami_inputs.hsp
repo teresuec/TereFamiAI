@@ -1,0 +1,68 @@
+// ########## キー入力 (terefami_inputs.hsp) ##########
+
+// 各キーのID
+#define KEYID_A		'Z'
+#define KEYID_B		'X'
+#define KEYID_ENTER	13
+#define KEYID_CTRL	17
+#define KEYID_ESC	27
+#define KEYID_LEFT	37
+#define KEYID_UP	38
+#define KEYID_RIGHT	39
+#define KEYID_DOWN	40
+
+#define KEY_ARROW_MAX 4
+
+*init_inputs
+	// key_arrow	: そのフレームでの矢印キーの方向 1 つ
+	// keys_arrow.*	: その矢印が押されているか
+	key_arrow=NONE
+	keyprev_arrow=NONE
+	dim keys_arrow,KEY_ARROW_MAX
+	dim keysprev_arrow,KEY_ARROW_MAX
+	
+	// キーが押されたままで起動された場合を考慮して前フレームの初期状態は押下に
+	keyprev_a=1
+	keyprev_b=1
+	keyprev_enter=1
+	keyprev_ctrl=1
+	keyprev_esc=1
+	return
+
+*inputs
+	// 前フレームの入力状態を保管
+	keyprev_a=key_a
+	keyprev_b=key_b
+	keyprev_enter=key_enter
+	keyprev_ctrl=key_ctrl
+	keyprev_esc=key_esc
+	keyprev_arrow=key_arrow
+	foreach keys_arrow
+		keysprev_arrow.cnt=keys_arrow.cnt
+	loop
+	
+	// 各キーの入力状態を取得
+	getkey key_a,KEYID_A
+	getkey key_b,KEYID_B
+	getkey key_enter,KEYID_ENTER
+	getkey key_ctrl,KEYID_CTRL
+	getkey key_esc,KEYID_ESC
+	getkey keys_arrow.LEFT,KEYID_LEFT
+	getkey keys_arrow.UP,KEYID_UP
+	getkey keys_arrow.RIGHT,KEYID_RIGHT
+	getkey keys_arrow.DOWN,KEYID_DOWN
+	
+	// 矢印キーの方向 1 つを決定
+	key_arrow=NONE
+	repeat KEY_ARROW_MAX
+		if(keys_arrow.cnt=1){
+			if(key_arrow=NONE){
+				key_arrow=cnt
+			}else{
+				key_arrow=NONE
+				break
+			}
+		}
+	loop
+	
+	return

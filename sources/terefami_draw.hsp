@@ -1,0 +1,792 @@
+// ########## 描画(terefami_draw.hsp) ##########
+
+#define BLACK	1,1,1
+#define WHITE	255,255,255
+
+#define ZOOMRATE	scrsize_h@/600
+#define SIZE_CHARA	512	// キャラクタ画像のサイズ (2^nの値)
+
+#define FILENAME_LOGO	"imgs\\logo.png"
+#define FILENAME_BG		"imgs\\bg.jpg"
+
+#define FILENAME_TITLE_ENTER		"imgs\\title_enter.png"
+#define FILENAME_SELECT_LISTBG		"imgs\\select_listbg.png"
+#define FILENAME_SELECT_PLAYERS		"imgs\\select_players.png"
+#define FILENAME_PLAYING_PLAYERS	"imgs\\playing_players.png"
+#define FILENAME_PLAYING_NUMS		"imgs\\playing_nums.png"
+#define FILENAME_PLAYING_NUMS_POINT	"imgs\\playing_nums_point.png"
+#define FILENAME_PLAYING_SCORELABEL	"imgs\\playing_scorelabel.png"
+#define FILENAME_PLAYING_TIMEUP		"imgs\\playing_timeup.png"
+
+#enum BUF_TEMP=1
+#enum BUF_TEMP2
+
+#enum IMG_TEMP=0
+#enum IMG_TEMP2
+#enum IMG_DRAWTXT_TEMP
+
+*init_draw
+	// テクスチャの読み込み
+	texmake scrsize_w,scrsize_h : tex_hgmes=stat
+	tex_logo=loadimage_direct(FILENAME_LOGO)
+	addplate model_logo,1,40,15,0,0,1280/2*ZOOMRATE,480/2*ZOOMRATE,tex_logo
+	tex_bg=loadbgimage(FILENAME_BG,1)
+	addspr model_bg,0,0,0,scrsize_w-1,scrsize_h-1,tex_bg
+	tex_title_enter=loadimage_direct(FILENAME_TITLE_ENTER)
+	tex_select_listbg=loadimage_direct(FILENAME_SELECT_LISTBG)
+	tex_select_players=loadimage_direct(FILENAME_SELECT_PLAYERS)
+	tex_playing_players=loadimage_direct(FILENAME_PLAYING_PLAYERS)
+	tex_playing_nums=loadimage_direct(FILENAME_PLAYING_NUMS,64/2*ZOOMRATE*5,96/2*ZOOMRATE*11)
+	tex_playing_nums_point=loadimage_direct(FILENAME_PLAYING_NUMS_POINT,32/2*ZOOMRATE*3,48/2*ZOOMRATE*13)
+	tex_playing_scorelabel=loadimage_direct(FILENAME_PLAYING_SCORELABEL,128/2*ZOOMRATE,48/2*ZOOMRATE)
+	tex_playing_timeup=loadimage_direct(FILENAME_PLAYING_TIMEUP,1024/2*ZOOMRATE,360/2*ZOOMRATE)
+	
+	// 作業用テクスチャの作成
+	font "MS Gothic",28*ZOOMRATE
+	dim texs_select_charaname,chara_num
+	dim texsizes_select_charaname,chara_num
+	dim texsizes_select_charaname_border,chara_num
+	repeat chara_num
+		texmake 470/2*ZOOMRATE+2,32*ZOOMRATE+2
+		texs_select_charaname.cnt=stat
+		texmake 470/2*ZOOMRATE+2,32*ZOOMRATE+2
+		texs_select_charaname_border.cnt=stat
+		texsizes_select_charaname.cnt=0
+		// キャラクタ名の文字列の幅を計算
+		GetTxtExtPoint charas_name.cnt,textSize
+		texsizes_select_charaname.cnt=textSize
+		// キャラクタ名の文字列の縁取りを黒色で描画
+		texopt ,,1
+		color BLACK
+		_hgmes texs_select_charaname_border.cnt,charas_name.cnt,0,2
+		_hgmes texs_select_charaname_border.cnt,charas_name.cnt,4,2,1
+		_hgmes texs_select_charaname_border.cnt,charas_name.cnt,2,0,1
+		_hgmes texs_select_charaname_border.cnt,charas_name.cnt,2,4,1
+		_hgmes texs_select_charaname_border.cnt,charas_name.cnt,0,0,1
+		_hgmes texs_select_charaname_border.cnt,charas_name.cnt,0,4,1
+		_hgmes texs_select_charaname_border.cnt,charas_name.cnt,4,0,1
+		_hgmes texs_select_charaname_border.cnt,charas_name.cnt,4,4,1
+		_hgmes texs_select_charaname_border.cnt,charas_name.cnt,4,6,1
+		_hgmes texs_select_charaname_border.cnt,charas_name.cnt,6,4,1
+		_hgmes texs_select_charaname_border.cnt,charas_name.cnt,4,6,1
+		_hgmes texs_select_charaname_border.cnt,charas_name.cnt,2,6,1
+		_hgmes texs_select_charaname_border.cnt,charas_name.cnt,6,2,1
+		_hgmes texs_select_charaname_border.cnt,charas_name.cnt,6,6,1
+		// キャラクタ名の文字列を白色で描画
+		texopt ,,0
+		color WHITE
+		_hgmes texs_select_charaname.cnt,charas_name.cnt,2,2,1
+	loop
+	dim texs_playing_charaname,8
+	dim texs_playing_charaname_border,8
+	dim texsizes_playing_charaname,8
+	repeat 8
+		texmake 250/2*ZOOMRATE*2+6,17*ZOOMRATE*2+6
+		texs_playing_charaname.cnt=stat
+		texmake 250/2*ZOOMRATE*2+6,17*ZOOMRATE*2+6
+		texs_playing_charaname_border.cnt=stat
+		texsizes_playing_charaname.cnt=0
+	loop
+	dim texs_selectmap_name,length(maps_name)
+	dim texs_selectmap_name_border,length(maps_name)
+	foreach maps_name
+		texmake 500/2*ZOOMRATE+6,17*ZOOMRATE*2+6
+		texs_selectmap_name.cnt=stat
+		texmake 500/2*ZOOMRATE+6,17*ZOOMRATE*2+6
+		texs_selectmap_name_border.cnt=stat
+		// マップ名の文字列の縁取りを黒色で描画
+		texopt ,,1
+		color BLACK
+		_hgmes texs_selectmap_name_border.cnt,maps_name.cnt,0,2
+		_hgmes texs_selectmap_name_border.cnt,maps_name.cnt,4,2,1
+		_hgmes texs_selectmap_name_border.cnt,maps_name.cnt,2,0,1
+		_hgmes texs_selectmap_name_border.cnt,maps_name.cnt,2,4,1
+		_hgmes texs_selectmap_name_border.cnt,maps_name.cnt,0,0,1
+		_hgmes texs_selectmap_name_border.cnt,maps_name.cnt,0,4,1
+		_hgmes texs_selectmap_name_border.cnt,maps_name.cnt,4,0,1
+		_hgmes texs_selectmap_name_border.cnt,maps_name.cnt,4,4,1
+		_hgmes texs_selectmap_name_border.cnt,maps_name.cnt,4,6,1
+		_hgmes texs_selectmap_name_border.cnt,maps_name.cnt,6,4,1
+		_hgmes texs_selectmap_name_border.cnt,maps_name.cnt,4,6,1
+		_hgmes texs_selectmap_name_border.cnt,maps_name.cnt,2,6,1
+		_hgmes texs_selectmap_name_border.cnt,maps_name.cnt,6,2,1
+		_hgmes texs_selectmap_name_border.cnt,maps_name.cnt,6,6,1
+		// マップ名の文字列を白色で描画
+		texopt ,,0
+		color WHITE
+		_hgmes texs_selectmap_name.cnt,maps_name.cnt,2,2,1
+	loop
+	
+	// マップチップのテクスチャ・モデル作成
+	dim texs_mapchip,32
+	dim models_mapchip,32
+	repeat 32
+		exist "imgs\\mapchip_"+cnt+".png"
+		if(strsize!=-1){
+			if(cnt<5){
+				if(MODE_2D=0){
+					addbox models_mapchip.cnt,1.0f,1.0f
+				}else:addplate models_mapchip.cnt,1,1.0f,1.0f,0,0,SIZE_CHARA-1,SIZE_CHARA-1
+			}else:if(cnt<10){
+				if(MODE_2D=0){
+					addbox models_mapchip.cnt,1.0f,0.25f
+				}else:addplate models_mapchip.cnt,1,1.0f,0.25f,0,0,SIZE_CHARA-1,SIZE_CHARA-1
+			}else{
+				addplate models_mapchip.cnt,1,1.0f,1.0f,0,0,SIZE_CHARA-1,SIZE_CHARA-1
+			}
+			texs_mapchip.cnt=loadimage_direct_chara("imgs\\mapchip_"+cnt+".png")
+		}
+	loop
+	
+	// 攻撃チップのテクスチャ・モデル作成
+	dim models_atkchip_attack,4
+	dim texs_atkchip_attack,4
+	addplate models_atkchip_attack.LEFT,1,1.0f,1.0f,0,0,SIZE_CHARA-1,SIZE_CHARA-1 // 攻撃(左向き)
+	texs_atkchip_attack.LEFT=loadimage_direct_chara("imgs\\atkchip_attack_left.png")
+	addplate models_atkchip_attack.RIGHT,1,1.0f,1.0f,0,0,SIZE_CHARA-1,SIZE_CHARA-1 // 攻撃(右向き)
+	texs_atkchip_attack.RIGHT=loadimage_direct_chara("imgs\\atkchip_attack_right.png")
+	
+	// 防御チップのテクスチャ・モデル作成
+	tex_guardchip=loadimage_direct("imgs\\guardchips.png",SIZE_CHARA*8,SIZE_CHARA)
+	dim models_guardchip,8
+	repeat 8
+		addplate models_guardchip.cnt,1,1.0f,1.0f,SIZE_CHARA*cnt,0,SIZE_CHARA*cnt+SIZE_CHARA-1,SIZE_CHARA-1,tex_guardchip // 防御
+	loop
+	
+	// 各キャラクタのテクスチャ・モデル作成
+	dim texs_chara,2,chara_num	// キャラクタ画像のテクスチャID
+	dim models_chara,2,chara_num	// キャラクタのモデルID
+	repeat 2
+		_cnt=cnt
+		repeat chara_num
+			texs_chara._cnt.cnt=-1
+			models_chara._cnt.cnt=-1
+			if((getpath(charas_imgfilename.cnt,2)!=".png")&(getpath(charas_imgfilename.cnt,2)!=".PNG")){
+				dialog "AIの画像ファイルはPNG形式である必要があります("+charas_imgfilename.cnt+")"
+			}else{
+				exist "ai\\"+charas_imgfilename.cnt
+				if(strsize>=0){
+					addplate models_chara._cnt.cnt,1,1.0f,1.0f,0,0,SIZE_CHARA-1,SIZE_CHARA-1
+					if(_cnt=0){
+						texs_chara._cnt.cnt=loadimage_direct_chara("ai\\"+charas_imgfilename.cnt)
+					}else{
+						texs_chara._cnt.cnt=loadimage_direct_chara_reverse("ai\\"+charas_imgfilename.cnt)
+					}
+				}else{
+					dialog "AIの画像ファイルが見つかりませんでした("+charas_imgfilename.cnt+")"
+				}
+			}
+		loop
+	loop
+	
+	// トランジション用のテクスチャを作成
+	buffer BUF_TEMP,two(scrsize_w),two(scrsize_h)
+	color BLACK
+	boxf
+	settex scrsize_w,scrsize_h,0,-1
+	tex_black=stat
+	return
+
+*draw
+	if(skipdraw=1):skipdraw=0:frame++:return // スキップフラグが1の場合、描画を飛ばす
+	
+	if(stateinit=1):gosub *draw_stateinit:stateinit=0:return
+	
+	gosub *draw_bg	// 背面描画
+	hgdraw	// 背面の描画を反映
+	
+	gosub *draw_fg	// 前面描画
+	
+	if(key_ctrl=1){
+		hgsync 1 // ウェイト
+	}else{
+		hgsync TIME_WAIT // ウェイト
+	}
+	frame++ // フレームカウントを進める
+	
+	return
+
+*draw_stateinit
+	switch state
+	case ST_TITLE
+		regobj obj_bg,model_bg
+		regobj obj_logo,model_logo
+		swbreak
+	case ST_SELECT
+		regobj obj_bg,model_bg
+		swbreak
+	case ST_SELECTMAP
+		regobj obj_bg,model_bg
+		swbreak
+	case ST_PLAYING
+		// 背景テクスチャを準備
+		tex_mapbg=loadbgimage("maps\\"+getpath(maps_filename.map_id,1)+".jpg",1)
+		clstex tex_mapbg
+	
+		// カメラ・ライトの設定
+		setpos HGOBJ_CAMERA,double(map_w)/2-0.5f,double(map_h)/2-0.5f-5.0f,100.0f
+		setang HGOBJ_CAMERA,-M_PI/32*(MODE_2D=0),0,0
+		setpos HGOBJ_LIGHT,double(map_w)/2,0.0f,500.0f
+		setang HGOBJ_LIGHT,-1.0f,1.5f,0.0f
+		setscale HGOBJ_LIGHT,1100,1100,1100
+		
+		// マップチップのオブジェクトを準備
+		dim objs_mapchip,map_w,map_h,map_d
+		repeat map_d
+			if((cnt!=map_d/2)&MODE_2D):continue
+			__cnt=cnt
+			repeat map_h
+				_cnt=cnt
+				repeat map_w
+					switch mapchips_zall.cnt._cnt.__cnt
+					case 0
+					case 1
+					case 2
+					case 3
+					case 4
+						regobj objs_mapchip.cnt._cnt.__cnt,models_mapchip.(mapchips_zall.cnt._cnt.__cnt)
+						swbreak
+					case 5
+					case 6
+					case 7
+					case 8
+					case 9
+						regobj objs_mapchip.cnt._cnt.__cnt,models_mapchip.(mapchips_zall.cnt._cnt.__cnt)
+						if(MODE_2D=0):setscale objs_mapchip.cnt._cnt.__cnt,1.0f,1.0f,4.0f
+						swbreak
+					default
+						objs_mapchip.cnt._cnt.__cnt=-1
+					swend
+					if(objs_mapchip.cnt._cnt.__cnt!=-1){
+						setpos objs_mapchip.cnt._cnt.__cnt,cnt,_cnt,__cnt-map_d/2
+					}
+					if((mapchips_zall.cnt._cnt.__cnt>=5)&(mapchips_zall.cnt._cnt.__cnt<10)):addpos objs_mapchip.cnt._cnt.__cnt,0,-0.375f,0
+				loop
+			loop
+		loop
+		
+		// プレイヤーのオブジェクトを準備
+		dim objs_player,player_num
+		repeat player_num
+			regobj objs_player.cnt,models_chara.0.(players_chara.cnt)
+			setpos objs_player.cnt,players_startpos.cnt\map_w,players_startpos.cnt/map_w // マップ上で指定されたプレイヤー初期位置に配置
+			setevent objs_player.cnt,event_stepwait,0
+		loop
+		
+		// キャラクタ名のテクスチャを準備
+		font "MS Gothic",32*ZOOMRATE
+		repeat player_num
+			// キャラクタ名の文字列の幅を計算
+			GetTxtExtPoint charas_name.(players_chara.cnt),textSize
+			texsizes_playing_charaname.cnt=textSize
+			// キャラクタ名の文字列の縁取りを黒色で描画
+			texopt ,,1
+			color BLACK
+			_hgmes texs_playing_charaname_border.cnt,charas_name.(players_chara.cnt),0,2
+			_hgmes texs_playing_charaname_border.cnt,charas_name.(players_chara.cnt),4,2,1
+			_hgmes texs_playing_charaname_border.cnt,charas_name.(players_chara.cnt),2,0,1
+			_hgmes texs_playing_charaname_border.cnt,charas_name.(players_chara.cnt),2,4,1
+			_hgmes texs_playing_charaname_border.cnt,charas_name.(players_chara.cnt),0,0,1
+			_hgmes texs_playing_charaname_border.cnt,charas_name.(players_chara.cnt),0,4,1
+			_hgmes texs_playing_charaname_border.cnt,charas_name.(players_chara.cnt),4,0,1
+			_hgmes texs_playing_charaname_border.cnt,charas_name.(players_chara.cnt),4,4,1
+			_hgmes texs_playing_charaname_border.cnt,charas_name.(players_chara.cnt),4,6,1
+			_hgmes texs_playing_charaname_border.cnt,charas_name.(players_chara.cnt),6,4,1
+			_hgmes texs_playing_charaname_border.cnt,charas_name.(players_chara.cnt),4,6,1
+			_hgmes texs_playing_charaname_border.cnt,charas_name.(players_chara.cnt),2,6,1
+			_hgmes texs_playing_charaname_border.cnt,charas_name.(players_chara.cnt),6,2,1
+			_hgmes texs_playing_charaname_border.cnt,charas_name.(players_chara.cnt),6,6,1
+			// キャラクタ名の文字列を白色で描画
+			texopt ,,0
+			color WHITE
+			_hgmes texs_playing_charaname.cnt,charas_name.(players_chara.cnt),2,2,1
+		loop
+		swbreak
+	case ST_RESULT
+		swbreak
+	default
+		dialog "異常なステート("+state+")"
+		end
+		swbreak
+	swend
+	return
+
+// 背面描画 (オブジェクトのパラメータ変更など)
+*draw_bg
+	pos 0,0
+	switch state
+	case ST_TITLE
+		setang obj_logo,0,double(time\5000-2500)/5000*M_PI,0
+		swbreak
+	case ST_SELECT
+		swbreak
+	case ST_SELECTMAP
+		swbreak
+	case ST_PLAYING
+		// カメラの移動
+		getpos HGOBJ_CAMERA,_posxf,_posyf,_poszf
+		if(MODE_AUTOCAM){
+			_posxf_player_min=double(map_w)
+			_posxf_player_max=0.0f
+			_posyf_player_min=double(map_h)
+			_posyf_player_max=0.0f
+			repeat player_num
+				getpos objs_player.cnt,_posxf_player,_posyf_player,_poszf_player
+				_posxf_player_min=minf(_posxf_player_min,_posxf_player)
+				_posxf_player_max=maxf(_posxf_player_max,_posxf_player)
+				_posyf_player_min=minf(_posyf_player_min,_posyf_player)
+				_posyf_player_max=maxf(_posyf_player_max,_posyf_player) // 大きく落下中のキャラは追いかけない
+			loop
+			_posyf_player_max=minf(_posyf_player_max,double(map_active_ymax))
+			_posxf_target=(_posxf_player_min+_posxf_player_max)/2
+			_poszf_target=maxf(maxf((_posxf_player_max-_posxf_player_min)/1.9f,(_posyf_player_max-_posyf_player_min)/0.75f)*1.7f,8.0f)
+			_posyf_target=(_posyf_player_min+_posyf_player_max)/2-2.0f*(minf(_poszf_target,16.0f)/16.0f-0.5f)
+		}else{
+			_posxf_target=(map_active_xmin+map_active_xmax)/2
+			_poszf_target=maxf(maxf(double(map_active_w)/1.9f,double(map_active_h)/0.75f)*1.7f,8.0f)
+			_posyf_target=(map_active_ymin+map_active_ymax)/2+18.0f
+		}
+		setpos HGOBJ_CAMERA,_posxf+(_posxf_target-_posxf)*double(min(max(TIME_WAIT,1),TIME_AUTOCAM))/TIME_AUTOCAM,_posyf+(_posyf_target-_posyf)*double(min(max(TIME_WAIT,1),TIME_AUTOCAM))/TIME_AUTOCAM,_poszf+(_poszf_target-_poszf)*double(min(max(TIME_WAIT,1),TIME_AUTOCAM))/TIME_AUTOCAM
+		// プレイヤーオブジェクト表示に関する値を設定
+		repeat player_num
+			setefx objs_player.cnt,255.0f*(cos(minf(double(time-players_damaged_time.cnt)/max((FRAME_STEP+FRAME_WAIT)*TIME_WAIT,1),1.0f)*M_PI*12.0f)+1.0f)/2.0f,0.0f,0.0f // ダメージを受けた際の点滅
+			if(players_skip_remain.cnt>0):setefx objs_player.cnt,512.0f+255.0f*(cos(double(time)/max((FRAME_STEP+FRAME_WAIT)*TIME_WAIT,1)*M_PI*2.0f)+1.0f)/2.0f,0.0f,0.0f
+		loop
+		swbreak
+	case ST_RESULT
+		swbreak
+	default
+		dialog "異常なステート("+state+")"
+		end
+		swbreak
+	swend
+	return
+
+// 前面描画 (直接描画)
+*draw_fg
+	switch state
+	case ST_TITLE
+		pos scrsize_w/2,500*ZOOMRATE
+		hgcopy tex_title_enter,0,0,1200/2*ZOOMRATE,64/2*ZOOMRATE,3,int((sin(double(time)/400f)+1f)/2f*255)
+		pos 0,0
+		if(time<TIME_TRANSITION){
+			hgcopy_a tex_black,0,0,scrsize_w,scrsize_h,3,255-255*time/TIME_TRANSITION
+		}
+		if(time_enter>=0){
+			hgcopy_a tex_black,0,0,scrsize_w,scrsize_h,3,min(255*(time-time_enter)/TIME_TRANSITION,255)
+		}
+		swbreak
+	case ST_SELECT
+		// 最大 10 x 4 = 40 個 のキャラクタのリストを表示する
+		repeat 4
+			_cnt=cnt
+			repeat 10
+				// 項目枠の描画
+				pos scrsize_w/2-154*10/2/2*ZOOMRATE+cnt*154/2*ZOOMRATE,20*ZOOMRATE+_cnt*154/2*ZOOMRATE
+				hgcopy_a tex_select_listbg,0,0,144/2*ZOOMRATE,144/2*ZOOMRATE,3,255-127*(_cnt*10+cnt>=chara_num)
+				// キャラクタ画像の描画
+				if(_cnt*10+cnt<chara_num){
+					if(charas_imgfilename.(_cnt*10+cnt)!=""){
+						pos ginfo_cx+8/2*ZOOMRATE,ginfo_cy+8/2*ZOOMRATE
+						hgzoom_a (144-8*2)/2*ZOOMRATE,(144-8*2)/2*ZOOMRATE,texs_chara.0.(_cnt*10+cnt),0,0,SIZE_CHARA,SIZE_CHARA,3,255
+					}
+				}
+				// 選択枠の描画
+				cnt_=cnt
+				repeat playernow+1
+					if(players_chara.cnt=_cnt*10+cnt_){
+						pos scrsize_w/2-154*10/2/2*ZOOMRATE+cnt_*154/2*ZOOMRATE,20*ZOOMRATE+_cnt*154/2*ZOOMRATE
+						hgcopy_a tex_select_listbg,144/2*ZOOMRATE*(cnt+1),0,144/2*ZOOMRATE,144/2*ZOOMRATE,3,(playernow!=cnt)*255+(playernow=cnt)*(128+int((sin(double(time)/120f)+1f)/2f*127))
+					}
+				loop
+			loop
+		loop
+		// 最大8人のプレイヤーのリストを表示する
+		repeat 8
+			// 項目枠の描画
+			pos scrsize_w/2-200/2*ZOOMRATE*8/2+200/2*ZOOMRATE*cnt,scrsize_h-540/2*ZOOMRATE
+			_ginfo_cx=ginfo_cx
+			_ginfo_cy=ginfo_cy
+			hgcopy_a tex_select_players,200/2*ZOOMRATE*cnt,540/2*ZOOMRATE*(cnt>playernow),200/2*ZOOMRATE,540/2*ZOOMRATE,3,255
+			if(cnt<=playernow){
+				// キャラクタ画像の描画
+				if(charas_imgfilename.(players_chara.cnt)!=""){
+					pos _ginfo_cx+8/2*ZOOMRATE,_ginfo_cy+20*ZOOMRATE
+					hgzoom_a 200/2*ZOOMRATE-8/2*ZOOMRATE,(200/2*ZOOMRATE-8/2*ZOOMRATE)*2,texs_chara.0.(players_chara.cnt),0,0,SIZE_CHARA/2,SIZE_CHARA,3,255-127*(cnt=playernow)*(time_enter<0)
+				}
+				// キャラクタ名を90度回転して表示
+				pos _ginfo_cx,scrsize_h-20*ZOOMRATE-texsizes_select_charaname.(players_chara.cnt)
+				hgcopy90_a texs_select_charaname_border.(players_chara.cnt),0,0,32*ZOOMRATE,470/2*ZOOMRATE,3,255
+				hgcopy90_a texs_select_charaname.(players_chara.cnt),0,0,32*ZOOMRATE,470/2*ZOOMRATE,3,255
+			}
+		loop
+		pos 0,0
+		if(time<TIME_TRANSITION){
+			hgcopy_a tex_black,0,0,scrsize_w,scrsize_h,3,255-255*time/TIME_TRANSITION
+		}
+		if(time_enter>=0){
+			hgcopy_a tex_black,0,0,scrsize_w,scrsize_h,3,min(255*(time-time_enter)/TIME_TRANSITION,255)
+		}
+		repeat 8
+			playersprev_chara=players_chara
+		loop
+		swbreak
+	case ST_SELECTMAP
+		// マップ名を並べて表示
+		foreach maps_name
+			pos 40/2*ZOOMRATE,40/2*ZOOMRATE+80/2*ZOOMRATE*cnt
+			hgcopy_a texs_selectmap_name_border.cnt,0,0,400/2*ZOOMRATE*2+6,17*ZOOMRATE*2+6,3,128+127*(selnow=cnt)
+			hgcopy_a texs_selectmap_name.cnt,0,0,400/2*ZOOMRATE*2+6,17*ZOOMRATE*2+6,3,128+127*(selnow=cnt)
+		loop
+		pos 0,0
+		if(time<TIME_TRANSITION){
+			hgcopy_a tex_black,0,0,scrsize_w,scrsize_h,3,255-255*time/TIME_TRANSITION
+		}
+		if(time_enter>=0){
+			hgcopy_a tex_black,0,0,scrsize_w,scrsize_h,3,min(255*(time-time_enter)/TIME_TRANSITION,255)
+		}
+		swbreak
+	case ST_PLAYING
+		// プレイヤーの向きを反映
+		repeat player_num
+			setobjmodel objs_player.cnt,models_chara.(players_direction.cnt>0).(players_chara.cnt)
+		loop
+		// 最大8人のプレイヤーのリストを表示する
+		repeat player_num
+			// 項目枠の描画
+			pos 112/2/2*ZOOMRATE+250/2*ZOOMRATE*cnt,scrsize_h-220/2*ZOOMRATE
+			if(time-players_damaged_time.cnt<200):pos ginfo_cx+10.0f*sin(M_PI*6*double(time-players_damaged_time.cnt)/200)*(200.0f-double(time-players_damaged_time.cnt))/200.0f,scrsize_h-220/2*ZOOMRATE
+			_ginfo_cx=ginfo_cx
+			_ginfo_cy=ginfo_cy
+			hgcopy_a tex_playing_players,250/2*ZOOMRATE*cnt,0,250/2*ZOOMRATE,220/2*ZOOMRATE,3,255
+			// キャラクタ画像の描画
+			if(charas_imgfilename.(players_chara.cnt)!=""){
+				pos ginfo_cx+24/2*ZOOMRATE,ginfo_cy+104/2*ZOOMRATE
+				hgzoom_a 72/2*ZOOMRATE,72/2*ZOOMRATE,texs_chara.0.(players_chara.cnt),0,0,SIZE_CHARA,SIZE_CHARA,3,255
+			}
+			// キャラクタ名の表示
+			pos _ginfo_cx+250/2*ZOOMRATE-16/2*ZOOMRATE-texsizes_playing_charaname.cnt/2,_ginfo_cy+182/2*ZOOMRATE
+			hgzoom_a 250/2*ZOOMRATE+3,17*ZOOMRATE+3,texs_playing_charaname_border.cnt,0,0,250/2*ZOOMRATE*2+6,17*ZOOMRATE*2+6,3,255
+			hgzoom_a 250/2*ZOOMRATE+3,17*ZOOMRATE+3,texs_playing_charaname.cnt,0,0,250/2*ZOOMRATE*2+6,17*ZOOMRATE*2+6,3,255
+			// ダメージ％の色を決定
+			numcolor=min(players_damage.cnt/25,4)
+			// ダメージ％の表示
+			bufText=str(players_damage.cnt)
+			_cnt=cnt
+			repeat strlen(bufText)
+				pos _ginfo_cx+194/2*ZOOMRATE-46/2*ZOOMRATE*(strlen(bufText)-cnt)-8/2*ZOOMRATE*(players_damage._cnt<100)-4/2*ZOOMRATE*(players_damage._cnt<10),_ginfo_cy+94/2*ZOOMRATE
+				hgcopy_a tex_playing_nums,64/2*ZOOMRATE*numcolor,96/2*ZOOMRATE*(int(strmid(bufText,cnt,1))),64/2*ZOOMRATE,96/2*ZOOMRATE,3,255 // 数字
+				if(time-players_damaged_time._cnt<200):hgcopy_a tex_playing_nums,64/2*ZOOMRATE*4,96/2*ZOOMRATE*(int(strmid(bufText,cnt,1))),64/2*ZOOMRATE,96/2*ZOOMRATE,3,255*(200.0f-double(time-players_damaged_time._cnt))/200.0f // 数字
+			loop
+			pos _ginfo_cx+192/2*ZOOMRATE,_ginfo_cy+94/2*ZOOMRATE
+			hgcopy_a tex_playing_nums,64/2*ZOOMRATE*numcolor,96/2*ZOOMRATE*10,64/2*ZOOMRATE,96/2*ZOOMRATE,3,255 // ％
+			if(time-players_damaged_time.cnt<200):hgcopy_a tex_playing_nums,64/2*ZOOMRATE*4,96/2*ZOOMRATE*10,64/2*ZOOMRATE,96/2*ZOOMRATE,3,255*(200.0f-double(time-players_damaged_time.cnt))/200.0f // ％
+			// ポイントの表示
+			bufText=str(abs(players_point.cnt))
+			_cnt=cnt
+			repeat strlen(bufText)
+				pos _ginfo_cx+40/2*ZOOMRATE+24/2*ZOOMRATE*cnt,_ginfo_cy+50/2*ZOOMRATE
+				hgcopy_a tex_playing_nums_point,32/2*ZOOMRATE*(sgn(players_point._cnt)+1),48/2*ZOOMRATE*(int(strmid(bufText,cnt,1))),32/2*ZOOMRATE,48/2*ZOOMRATE,3,255 // 数字
+			loop
+			pos _ginfo_cx+40/2*ZOOMRATE-24/2*ZOOMRATE,_ginfo_cy+50/2*ZOOMRATE
+			hgcopy_a tex_playing_nums_point,32/2*ZOOMRATE*(sgn(players_point.cnt)+1),48/2*ZOOMRATE*(10+(players_point.cnt<=0)+(players_point.cnt=0)),32/2*ZOOMRATE,48/2*ZOOMRATE,3,255 // +-
+			// 残り時間の表示
+			bufText=str(max(min(STEP_MAX-step+START_WAITSTEP,STEP_MAX),0))
+			pos scrsize_w/2-((strlen(bufText))*24/2+8/2+120/2)*ZOOMRATE/2,60/2*ZOOMRATE
+			hgcopy_a tex_playing_scorelabel,0,0,128/2*ZOOMRATE,48/2*ZOOMRATE,3,255 // SCORE:
+			pos scrsize_w/2-((strlen(bufText))*24/2+8/2-120/2)*ZOOMRATE/2,20/2*ZOOMRATE
+			_ginfo_cx=ginfo_cx
+			_ginfo_cy=ginfo_cy
+			repeat strlen(bufText)
+				pos _ginfo_cx+ZOOMRATE+48/2*ZOOMRATE*cnt,_ginfo_cy
+				hgcopy_a tex_playing_nums,0,96/2*ZOOMRATE*(int(strmid(bufText,cnt,1))),64/2*ZOOMRATE,96/2*ZOOMRATE,3,255 // 数字
+			loop
+			if(STEP_MAX-step+START_WAITSTEP<=0){
+				pos scrsize_w/2,scrsize_h/2
+				hgcopy tex_playing_timeup,0,0,1024/2*ZOOMRATE,360/2*ZOOMRATE,3,255 // TIME UP
+			}
+		loop
+		swbreak
+	case ST_RESULT
+		hgcopy_a tex_black,0,0,scrsize_w,scrsize_h,3,128
+		repeat player_num
+			// 項目枠の描画
+			pos 112/2/2*ZOOMRATE+250/2*ZOOMRATE*cnt,scrsize_h-220/2*ZOOMRATE
+			_ginfo_cx=ginfo_cx
+			_ginfo_cy=ginfo_cy
+			hgcopy_a tex_playing_players,250/2*ZOOMRATE*cnt,0,250/2*ZOOMRATE,220/2*ZOOMRATE,3,255
+			// キャラクタ画像の描画
+			if(charas_imgfilename.(players_chara.cnt)!=""){
+				pos ginfo_cx+24/2*ZOOMRATE,ginfo_cy+104/2*ZOOMRATE
+				hgzoom_a 72/2*ZOOMRATE,72/2*ZOOMRATE,texs_chara.0.(players_chara.cnt),0,0,SIZE_CHARA,SIZE_CHARA,3,255
+			}
+			// キャラクタ名の表示
+			pos _ginfo_cx+250/2*ZOOMRATE-16/2*ZOOMRATE-texsizes_playing_charaname.cnt/2,_ginfo_cy+182/2*ZOOMRATE
+			hgzoom_a 250/2*ZOOMRATE+3,17*ZOOMRATE+3,texs_playing_charaname_border.cnt,0,0,250/2*ZOOMRATE*2+6,17*ZOOMRATE*2+6,3,255
+			hgzoom_a 250/2*ZOOMRATE+3,17*ZOOMRATE+3,texs_playing_charaname.cnt,0,0,250/2*ZOOMRATE*2+6,17*ZOOMRATE*2+6,3,255
+			// ダメージ％の色を決定
+			numcolor=min(players_damage.cnt/25,4)
+			// ダメージ％の表示
+			bufText=str(players_damage.cnt)
+			_cnt=cnt
+			repeat strlen(bufText)
+				pos _ginfo_cx+194/2*ZOOMRATE-46/2*ZOOMRATE*(strlen(bufText)-cnt)-8/2*ZOOMRATE*(players_damage._cnt<100)-4/2*ZOOMRATE*(players_damage._cnt<10),_ginfo_cy+94/2*ZOOMRATE
+				hgcopy_a tex_playing_nums,64/2*ZOOMRATE*numcolor,96/2*ZOOMRATE*(int(strmid(bufText,cnt,1))),64/2*ZOOMRATE,96/2*ZOOMRATE,3,255 // 数字
+			loop
+			pos _ginfo_cx+192/2*ZOOMRATE,_ginfo_cy+94/2*ZOOMRATE
+			hgcopy_a tex_playing_nums,64/2*ZOOMRATE*numcolor,96/2*ZOOMRATE*10,64/2*ZOOMRATE,96/2*ZOOMRATE,3,255 // ％
+			// ポイントの表示
+			bufText=str(abs(players_point.cnt))
+			_cnt=cnt
+			repeat strlen(bufText)
+				pos _ginfo_cx+40/2*ZOOMRATE+24/2*ZOOMRATE*cnt,_ginfo_cy+50/2*ZOOMRATE
+				hgcopy_a tex_playing_nums_point,32/2*ZOOMRATE*(sgn(players_point._cnt)+1),48/2*ZOOMRATE*(int(strmid(bufText,cnt,1))),32/2*ZOOMRATE,48/2*ZOOMRATE,3,255 // 数字
+			loop
+			pos _ginfo_cx+40/2*ZOOMRATE-24/2*ZOOMRATE,_ginfo_cy+50/2*ZOOMRATE
+			hgcopy_a tex_playing_nums_point,32/2*ZOOMRATE*(sgn(players_point.cnt)+1),48/2*ZOOMRATE*(10+(players_point.cnt<=0)+(players_point.cnt=0)),32/2*ZOOMRATE,48/2*ZOOMRATE,3,255 // +-
+			// 順位の表示
+			pos _ginfo_cx+88/2*ZOOMRATE,_ginfo_cy+14/2*ZOOMRATE
+			hgcopy_a tex_playing_nums,0,96/2*ZOOMRATE*players_ranking.cnt,64/2*ZOOMRATE,96/2*ZOOMRATE,3,255
+		loop
+		swbreak
+	default
+		dialog "異常なステート("+state+")"
+		end
+		swbreak
+	swend
+	return
+
+
+#module
+
+// 画像を読み込む
+#defcfunc loadimage str filename,int zoommode
+	activeid=ginfo_act
+	exist filename
+	if(strsize=-1){
+		dialog "画像ファイルが見つかりません("+filename+")"
+		gsel activeid
+		return
+	}
+	buffer BUF_TEMP@
+	picload filename
+	size_w=ginfo_winx
+	size_h=ginfo_winy
+	buffer BUF_TEMP2@,two(size_w/2*ZOOMRATE),two(size_h/2*ZOOMRATE)
+	pos 0,0
+	gzoom size_w/2*ZOOMRATE,size_h/2*ZOOMRATE,BUF_TEMP@,0,0,size_w,size_h,zoommode
+	settex size_w/2*ZOOMRATE,size_h/2*ZOOMRATE
+	ret=stat
+	if(ret=-1){
+		dialog "テクスチャの登録に失敗("+filename+")"
+	}
+	gsel activeid
+	return ret
+
+// 背景画像を読み込む
+#defcfunc loadbgimage str filename,int zoommode
+	activeid=ginfo_act
+	exist filename
+	if(strsize=-1){
+		dialog "画像ファイルが見つかりません("+filename+")"
+		gsel activeid
+		return
+	}
+	buffer BUF_TEMP@
+	picload filename
+	size_w=ginfo_winx
+	size_h=ginfo_winy
+	buffer BUF_TEMP2@,two(scrsize_w@),two(scrsize_h@)
+	pos 0,0
+	color BLACK@
+	boxf
+	gzoom scrsize_w@,scrsize_h@,BUF_TEMP@,0,0,size_w,size_h,zoommode
+	settex scrsize_w@,scrsize_h@
+	ret=stat
+	if(ret=-1){
+		dialog "テクスチャの登録に失敗("+filename+")"
+	}
+	gsel activeid
+	return ret
+
+// DirectXのAPIで直接画像を読み込む(アルファブレンド付き画像の場合)
+#defcfunc _loadimage_direct str filename
+	exist filename
+	if(strsize=-1){
+		dialog "画像ファイルが見つかりません("+filename+")"
+		return
+	}
+	texload2 filename
+	ret=stat
+	if(ret=-1){
+		dialog "テクスチャの登録に失敗("+filename+")"
+	}
+	return ret
+
+// 画像リサイズ後、DirectXのAPIで直接画像を読み込む(アルファブレンド付き画像の場合)
+#defcfunc loadimage_direct str filename,int w,int h
+	exist filename
+	if(strsize=-1){
+		dialog "画像ファイルが見つかりません("+filename+")"
+		return
+	}
+	alCreateImageByFile IMG_TEMP@,filename
+	size_w=alGetWidth()
+	size_h=alGetHeight()
+	if((w>0)&(h>0)){
+		target_w=w
+		target_h=h
+	}else{
+		target_w=size_w/2*ZOOMRATE@
+		target_h=size_h/2*ZOOMRATE@
+	}
+	alCreateImage IMG_TEMP2@,target_w,target_h
+	alStretchImageToImage IMG_TEMP@,IMG_TEMP2@,0,0,size_w,size_h,0,0,target_w,target_h
+	_filename=filename
+	alSaveFile "cache\\"+getpath(_filename,8),"image/png",0,0,two(target_w),two(target_h)
+	alDeleteImage IMG_TEMP@
+	alDeleteImage IMG_TEMP2@
+	return _loadimage_direct("cache\\"+getpath(_filename,8))
+
+// SIZE_CHARA x SIZE_CHARA pxに画像リサイズ後、DirectXのAPIで直接画像を読み込む(アルファブレンド付き画像の場合)
+#defcfunc loadimage_direct_chara str filename
+	exist filename
+	if(strsize=-1){
+		dialog "画像ファイルが見つかりません("+filename+")"
+		return
+	}
+	alCreateImageByFile IMG_TEMP@,filename
+	size_w=alGetWidth()
+	size_h=alGetHeight()
+	alCreateImage IMG_TEMP2@,SIZE_CHARA@,SIZE_CHARA@
+	alStretchImageToImage IMG_TEMP@,IMG_TEMP2@,0,0,size_w,size_h,0,0,SIZE_CHARA@,SIZE_CHARA@
+	_filename=filename
+	alSaveFile "cache\\"+getpath(_filename,8),"image/png",0,0,SIZE_CHARA@,SIZE_CHARA@
+	alDeleteImage IMG_TEMP@
+	alDeleteImage IMG_TEMP2@
+	return _loadimage_direct("cache\\"+getpath(_filename,8))
+
+// 画像左右反転、SIZE_CHARA x SIZE_CHARA pxに画像リサイズ後、DirectXのAPIで直接画像を読み込む(アルファブレンド付き画像の場合)
+#defcfunc loadimage_direct_chara_reverse str filename
+	exist filename
+	if(strsize=-1){
+		dialog "画像ファイルが見つかりません("+filename+")"
+		return
+	}
+	alCreateImageByFile IMG_TEMP@,filename
+	size_w=alGetWidth()
+	size_h=alGetHeight()
+	alCreateImage IMG_TEMP2@,SIZE_CHARA@,SIZE_CHARA@
+	alStretchImageToImage IMG_TEMP@,IMG_TEMP2@,size_w,0,-size_w,size_h,0,0,SIZE_CHARA@,SIZE_CHARA@
+	_filename=filename
+	alSaveFile "cache\\"+getpath(_filename,8),"image/png",0,0,SIZE_CHARA@,SIZE_CHARA@
+	alDeleteImage IMG_TEMP@
+	alDeleteImage IMG_TEMP2@
+	return _loadimage_direct("cache\\"+getpath(_filename,8))
+
+#global
+
+// 文字列の横幅を求める
+#module
+#uselib "gdi32.dll"
+#func GetTextExtentPoint32 "GetTextExtentPoint32A" int,int,int,int
+#deffunc GetTxtExtPoint var tBuf,array tSize
+	txtLen=strlen(tBuf)
+	dim tSize,2
+	GetTextExtentPoint32 hdc,varptr(tBuf),txtLen,varptr(tSize)
+	return
+#global
+
+// HSP標準描画命令に対応したhgimg3描画命令のエイリアス
+#module
+
+#deffunc hgcopy int texid,int sx,int sy,int sw,int sh,int cmode,int tr
+	hgzoom sw,sh,texid,sx,sy,sw,sh,cmode,tr
+	return
+
+#deffunc hgcopy_a int texid,int sx,int sy,int sw,int sh,int cmode,int tr
+	hgzoom_a sw,sh,texid,sx,sy,sw,sh,cmode,tr
+	return
+
+#deffunc hgzoom int cw,int ch,int texid,int sx,int sy,int sw,int sh,int cmode,int tr
+	gmode cmode,sw,sh,tr
+	hgrotate texid,sx,sy,0.0f,cw,ch
+	return
+
+#deffunc hgzoom_a int cw,int ch,int texid,int sx,int sy,int sw,int sh,int cmode,int tr
+	pos ginfo(22)+(cw+1)/2,ginfo(23)+(ch+1)/2
+	gmode cmode,sw,sh,tr
+	hgrotate texid,sx,sy,0.0f,cw,ch
+	pos ginfo(22)-(cw+1)/2,ginfo(23)-(ch+1)/2
+	return
+
+#deffunc hgcopy90_a int texid,int sx,int sy,int sw,int sh,int cmode,int tr
+	pos ginfo(22)+(sw+1)/2,ginfo(23)+(sh+1)/2
+	gmode cmode,sh,sw,tr
+	hgrotate texid,sy,sx,M_PI/2,sh,sw
+	pos ginfo(22)-(sw+1)/2,ginfo(23)-(sh+1)/2
+	return
+
+#deffunc _hgmes int _p1,str _p2,int _p3,int _p4,int _p5
+	if(_p5=0):texcls _p1
+	texmes _p2,_p1,_p3,_p4
+	return
+
+#deffunc hgmes str p1,int p2,int p3
+	_hgmes tex_hgmes@,p1,0,0
+	hgcopy tex_hgmes@,0,0,p2,p3,3,255
+	return
+
+#deffunc hgmes_a str p1,int p2,int p3
+	_hgmes tex_hgmes@,p1,0,0
+	hgcopy_a tex_hgmes@,0,0,p2,p3,3,255
+	return
+
+#deffunc hgmes_rotate str p1,int p2,int p3,double p4
+	_hgmes tex_hgmes@,p1,0,0
+	gmode 3,p2,p3,255
+	hgrotate tex_hgmes@,0,0,p4,p2,p3
+	return
+
+#deffunc hgmes_rotate90_a str p1,int p2,int p3
+	_hgmes tex_hgmes@,p1,0,0
+	hgcopy90_a tex_hgmes@,0,0,p2,p3,3,255
+	return
+
+#deffunc settex2 int texid
+
+	;	texture reg
+	;
+	workscrid=ginfo(3)
+	winx=ginfo(12):winy=ginfo(13)
+
+	px=1:repeat 12
+	if px>=winx : break
+	px=px<<1:loop
+	py=1:repeat 12
+	if py>=winy : break
+	py=py<<1:loop
+	if ( px!=winx )|( py!=winy ) {	; 2^nサイズでない時は補正
+		buffer BUF_TEMP@,px,py,0
+		cls 4
+		gmode 0
+		pos 0,0
+		gcopy workscrid,0,0,winx,winy
+	}
+	settex winx,winy,0,texid
+	if stat<0 : dialog "Texture Error("+stat+")" { gsel hgsel : return }
+	i=stat
+	await 0
+	gsel hgsel@HGIMG
+	return i
+
+#global
+
+#module
+// その数値以上である最小の2^nを返す
+#defcfunc two int winx
+	px=1:repeat 12
+	if px>=winx : break
+	px=px<<1:loop
+	return px
+#global

@@ -1,0 +1,141 @@
+// ########## ゲーム本体(terefami_core.hsp) ##########
+
+// ライブラリの読み込み
+#include "llmod3/llmod3.hsp"
+#include "hspmath.as"
+#include "hgimg3.as"
+#include "a2d.hsp"
+
+// 各種情報(システム関連)
+#define GAME_NAME		"大奮闘テレッシュファミリーズAI"
+#define GAME_VERSION	"v1.01"
+
+/*
+
+// ※ config.iniから読み込む方式に変更済み
+
+#define TIME_WAIT		25	// フレーム毎のウェイト時間(0～) [標準値:25]
+#define TIME_TRANSITION	500	// トランジション(画面の切り替え)にかける時間(1～) [標準値:500]
+
+#define MODE_2D			1	// 2Dモード (1にするとマップを平面表示するようになります) [標準値:1]
+#define MODE_AUTOCAM	1	// カメラ移動するか [標準値:1]
+
+#define TIME_AUTOCAM	500	// カメラ移動の緩和時間(1～) [標準値:500]
+
+#define FRAME_STEP		10	// 1ステップの実行にかけるフレーム数(2～) [標準値:10]
+#define FRAME_WAIT		10	// ステップ実行後の待機フレーム数(0～) [標準値:10]
+
+#define START_WAITSTEP	6	// ゲーム開始時の待機ステップ数
+
+// 各種情報(ゲームバランス関連)
+#define ATTACK_DAMAGE_MIN	3	// 攻撃での最低ダメージ [標準値:3]
+#define ATTACK_DAMAGE_MAX	9	// 攻撃での最大ダメージ [標準値:6]
+#define ATTACK_DAMAGE_UP	2	// 連続攻撃でのダメージ上昇 [標準値:2]
+
+#define ATTACK_GUARD_STEP	3	// 防御の最低間隔ステップ数 [標準値:3]
+
+#define STEP_MAX			360	// 総ステップ数 [標準値:360]
+
+*/
+
+// ゲームステート
+#enum ST_TITLE=0
+#enum ST_SELECT
+#enum ST_SELECTMAP
+#enum ST_PLAYING
+#enum ST_RESULT
+
+// 方向
+#enum NONE=-1
+#enum LEFT
+#enum UP
+#enum RIGHT
+#enum DOWN
+
+// 変数の初期化
+state=ST_TITLE		// 現在のゲームステート
+stateprev=state		// 前フレームのゲームステート
+stateinit=1			// 各ゲームステート内の初期化フラグ(ゲームステート変更時に1に)
+skipdraw=0			// 描画スキップフラグ
+
+scrsize_w=1280		// ウィンドウの幅   (※config.iniからも読み込む)
+scrsize_h=720		// ウィンドウの高さ (※config.iniからも読み込む)
+
+// 乱数発生の初期化
+randomize
+
+// ウィンドウの初期化
+screen 0,scrsize_w,scrsize_h
+title GAME_NAME+" "+GAME_VERSION
+
+// hgimgの初期化
+hgsetreq SYSREQ_MAXOBJ, 4096
+hgsetreq SYSREQ_MAXEVENT, 8192
+hgini
+
+// config.iniから設定を読み込み
+#include "sources/terefami_loadconfig.hsp"
+
+// マップの読み込み
+#include "sources/terefami_regmap.hsp"
+
+// キャラクタの読み込み
+#include "sources/terefami_regchara.hsp"
+
+// 初期化
+gosub *init_inputs
+gosub *init_process
+gosub *init_draw
+
+// 終了時割り込み
+onexit *exit
+
+// メインループ
+repeat
+	gosub *inputs	// キー入力
+	
+	gosub *process	// ゲーム処理
+	
+	gosub *draw		// 描画 (※hgimg3はフレーム単位で動く仕様のため省略不可)
+loop
+
+// サブルーチン
+#include "sources/terefami_inputs.hsp"
+#include "sources/terefami_process.hsp"
+#include "sources/terefami_draw.hsp"
+
+// マップに関する関数群
+#define _REGMAP_FUNC
+#include "sources/terefami_regmap.hsp"
+
+#module
+#defcfunc min int a,int b
+	if(a>=b):return b
+	return a
+	
+#defcfunc max int a,int b
+	if(a>=b):return a
+	return b
+	
+#defcfunc ran int a,int b,int c
+	return min(max(a,b),c)
+	
+#defcfunc maxf double a,double b
+	if(a>=b):return a
+	return b
+	
+#defcfunc minf double a,double b
+	if(a>=b):return b
+	return a
+#global
+
+*exit
+	repeat charas_num
+		ll_libfree charas_instance.cnt
+	loop
+	if(state=ST_PLAYING){
+		repeat player_num
+			ll_libfree players_instance.cnt
+		loop
+	}
+	end

@@ -1,0 +1,560 @@
+// ########## ゲーム処理(terefami_process.hsp) ##########
+
+#define MAX_MOVE		50	// 1イベント内での移動距離の最大値
+
+#define _FRAME_STEP		(FRAME_STEP-1)
+#define __FRAME_STEP	(FRAME_STEP-2)
+
+*init_process
+	// イベントの作成
+	dim events_move,4/*方向*/,2/*落下の有無*/,MAX_MOVE+1/*移動距離*/
+	dim events_move_collision,4/*方向*/,2/*落下の有無*/
+	dim events_guardchip,8,2/*落下の有無*/
+	repeat 2
+		_fall=cnt
+		// 待機
+		newevent events_stepwait._fall
+		_thisevent=events_stepwait._fall
+		event_pos _thisevent,_FRAME_STEP,0.0f,_fall,0.0f,2
+		event_wait _thisevent,_FRAME_STEP+FRAME_WAIT
+	
+		// 移動
+		repeat 4
+			_direction=cnt
+			repeat MAX_MOVE,1
+				newevent events_move._direction._fall.cnt
+				_thisevent=events_move._direction._fall.cnt
+				event_pos _thisevent,_FRAME_STEP,dir2diffx(_direction)*cnt,dir2diffy(_direction)*cnt+_fall,0.0f,2
+				event_wait _thisevent,_FRAME_STEP+FRAME_WAIT
+			loop
+		loop
+		
+		// 移動失敗
+		repeat 4
+			newevent events_move_collision.cnt._fall
+			_thisevent=events_move_collision.cnt._fall
+			if(_FRAME_STEP>=2){
+				event_pos _thisevent,__FRAME_STEP/2,0.25f*dir2diffx(cnt),0.25f*dir2diffy(cnt)+0.5f*_fall,0.0f,2
+				event_wait _thisevent,__FRAME_STEP/2
+				event_pos _thisevent,__FRAME_STEP-__FRAME_STEP/2,-0.25f*dir2diffx(cnt),-0.25f*dir2diffy(cnt)+0.5f*_fall,0.0f,2
+				event_wait _thisevent,__FRAME_STEP-__FRAME_STEP/2+FRAME_WAIT
+			}else{
+				event_pos _thisevent,_FRAME_STEP-_FRAME_STEP/2,0.0f,_fall,0.0f,2
+				event_wait _thisevent,_FRAME_STEP+FRAME_WAIT
+			}
+		loop
+		
+		// 防御チップの動き
+		newevent events_guardchip._fall
+		_thisevent=events_guardchip._fall
+		event_setefx _thisevent,255,0,0
+		event_pos _thisevent,_FRAME_STEP,0.0f,_fall,0.0f,2
+		event_scale _thisevent,_FRAME_STEP,0.5f,0.5f,0.5f,1
+		event_wait _thisevent,_FRAME_STEP+FRAME_WAIT
+		event_delobj _thisevent
+	loop
+	// 攻撃チップの動き
+	dim events_atkchip,4
+	repeat 4
+		newevent events_atkchip.cnt
+		_thisevent=events_atkchip.cnt
+		//event_setefx _thisevent,767,0,0
+		event_setefx _thisevent,255,0,0
+		event_efx _thisevent,_FRAME_STEP/3,255,0,0,1
+		event_pos _thisevent,_FRAME_STEP/3,dir2diffx(cnt),dir2diffy(cnt),0.0f,2
+		event_wait _thisevent,(_FRAME_STEP+FRAME_WAIT)/3
+		event_efx _thisevent,_FRAME_STEP/3,0,0,0,1
+		event_wait _thisevent,(_FRAME_STEP+FRAME_WAIT)/3
+		event_delobj _thisevent
+	loop
+	return
+
+*process
+	if(stateinit=1){
+		gosub *process_stateinit
+	}else{
+		gosub *process_main
+	}
+	return
+
+*process_stateinit
+	frame=0
+	hgsettime 0,INT_MAX
+	switch state
+	case ST_TITLE
+		time_enter=-1	// Enterキーが押された時間
+		swbreak
+	case ST_SELECT
+		time_enter=-1	// Enterキーが押された時間
+		dim players_chara,8 // 各プレイヤーのキャラクタ
+		dim playersprev_chara,8
+		playersprev_chara=-1,-1,-1,-1,-1,-1,-1,-1
+		selnow=players_chara.0 // キャラクタ一覧のカーソル位置(0～39)
+		playernow=0
+		swbreak
+	case ST_SELECTMAP
+		time_enter=-1	// Enterキーが押された時間
+		selnow=0 // マップ一覧のカーソル位置
+		swbreak
+	case ST_PLAYING
+		// マップを読み込み
+		loadmap map_id
+		// プレイヤー数の決定
+		player_num=0
+		repeat 8
+			if(players_chara.cnt>=0){
+				player_num++
+			}else:break
+		loop
+		/*
+		// ※HSPでのAI作成のみに使用(廃止)
+		// プレイヤーのモジュールを準備
+		repeat player_num
+			gosub *routing_newmod
+		loop*/
+		// キャラクタDLLのインスタンス作成
+		dim players_instance,player_num
+		repeat player_num
+			bcopy "ai\\"+charas_dll.(players_chara.cnt),"cache\\player"+(cnt+1)+".dll"
+			ll_libload players_instance.cnt,"cache\\player"+(cnt+1)+".dll"
+			_prm=varptr(mapchips_blocktype),cnt,player_num,map_w,map_h
+			dllproc "_initAI",_prm,5,players_instance.cnt
+		loop
+		// 変数の初期化
+		endfl=0								// ゲーム終了フラグ
+		dim players_point,player_num		// プレイヤーの現在ポイント
+		dim players_skip_remain,player_num	// プレイヤーの残り強制待機ステップ数
+		dim players_damage,player_num		// プレイヤーのダメージ％
+		dim players_jump_remain,player_num	// プレイヤーのジャンプ可能回数
+		dim players_direction,player_num	// プレイヤーの向き(左=0, 上=1, 右=2, 下=3)
+		dim players_damaged_time,player_num	// プレイヤーが最後に攻撃を受けた時間
+		dim players_attackcount,player_num	// プレイヤーの連続攻撃回数
+		dim players_guardstep,player_num	// プレイヤーの防御可能までのステップ数
+		dim players_attacknow,player_num	// プレイヤーが現在攻撃しているか
+		dim players_guardnow,player_num		// プレイヤーが現在防御しているか
+		dim players_lastattacker,player_num // プレイヤーが最後に攻撃を受けた敵のID
+		repeat player_num
+			players_skip_remain.cnt=START_WAITSTEP
+			players_damaged_time.cnt=-10000
+			players_guardstep.cnt=ATTACK_GUARD_STEP
+			players_lastattacker.cnt=-1
+		loop
+		player_killed_time=-10000		// プレイヤーが画面外に出てKILLされた時間
+		player_killed_direction=LEFT	// プレイヤーが画面外に出てKILLされた方向
+		step=0 // ステップカウンタ
+		swbreak
+	case ST_RESULT
+		dim players_ranking,player_num
+		dim _players_point,player_num
+		repeat player_num
+			_players_point.cnt=players_point.cnt*10000-min(players_damage.cnt,10000)
+		loop
+		repeat player_num
+			cnt_=0
+			maxpoint=-100000000
+			repeat player_num
+				if(maxpoint<_players_point.cnt){
+					cnt_=cnt
+					maxpoint=_players_point.cnt
+				}
+			loop
+			players_ranking.cnt_=cnt+1
+			_players_point.cnt_-=100000000
+		loop
+		swbreak
+	default
+		dialog "異常なステート("+state+")"
+		end
+		swbreak
+	swend
+	return
+
+*process_main
+	hggettime time,0
+	switch state
+	case ST_TITLE
+		// Enterキーが押された
+		if((key_enter=1)&(keyprev_enter=0)&(time_enter<0)){
+			time_enter=time
+		}
+		// セレクト画面への遷移
+		if((time_enter>=0)&(time-time_enter>TIME_TRANSITION)){
+			delobj obj_bg
+			delobj obj_logo
+			state=ST_SELECT
+			stateinit=1
+			skipdraw=1
+			keyprev_enter=1
+		}
+		swbreak
+	case ST_SELECT
+		if(time_enter<0){
+			// Aボタンが押された
+			if((key_a=1)&(keyprev_a=0)){
+				if(playernow<7){
+					playernow++
+					players_chara.playernow=selnow
+				}else:if(time_enter<0):time_enter=time
+			}
+			// Bボタンが押された
+			if((key_b=1)&(keyprev_b=0)){
+				if(playernow>0){
+					players_chara.playernow=-1
+					playernow--
+				}
+			}
+			// Enterキーが押された
+			if((key_enter=1)&(keyprev_enter=0)&(time_enter<0)){
+				time_enter=time
+				repeat 7-playernow,playernow+1
+					players_chara.cnt=-1
+				loop
+			}
+			// 矢印キーが押された
+			if((key_arrow>=0)&(keyprev_arrow!=key_arrow)){
+				selnow=ran(selnow+dir2diffx(key_arrow)+10*dir2diffy(key_arrow),0,chara_num-1)
+				players_chara.playernow=selnow
+			}
+		}
+		// マップ選択画面への遷移
+		if((time_enter>=0)&(time-time_enter>TIME_TRANSITION)){
+			delobj obj_bg
+			state=ST_SELECTMAP
+			stateinit=1
+			skipdraw=1
+			keyprev_enter=1
+		}
+		swbreak
+	case ST_SELECTMAP
+		if(time_enter<0){
+			// Enterキーが押された
+			if((((key_enter=1)&(keyprev_enter=0))|((key_a=1)&(keyprev_a=0)))&(time_enter<0)){
+				time_enter=time
+			}
+			// 矢印キーが押された
+			if((key_arrow>=0)&(keyprev_arrow!=key_arrow)){
+				selnow=ran(selnow+dir2diffy(key_arrow),0,length(maps_name)-1)
+			}
+		}
+		// プレイ画面への遷移
+		if((time_enter>=0)&(time-time_enter>TIME_TRANSITION)){
+			if(selnow=0){
+				map_id=rnd(length(maps_name)-1)+1
+			}else:map_id=selnow
+			delobj obj_bg
+			state=ST_PLAYING
+			stateinit=1
+			skipdraw=1
+			keyprev_enter=1
+		}
+		swbreak
+	case ST_PLAYING
+		repeat player_num
+			getpos objs_player.cnt,_posxf,_posyf,_poszf
+			// 画面範囲外のプレイヤーをKILL
+			if(round(_posxf)<0):kill_player cnt,LEFT:continue
+			if(round(_posxf)>map_w-1):kill_player cnt,RIGHT:continue
+			if(round(_posyf)<0):kill_player cnt,UP:continue
+			if(round(_posyf)>map_h-1):kill_player cnt,DOWN:continue
+		loop
+		// ステップの実行
+		if((frame\(FRAME_STEP+FRAME_WAIT)=0)&(STEP_MAX-step+START_WAITSTEP>0)){
+			// 各プレイヤーの位置を取得
+			dim players_posx,player_num
+			dim players_posy,player_num
+			repeat player_num
+				getpos objs_player.cnt,_posxf,_posyf,_poszf
+				setpos objs_player.cnt,round(_posxf),round(_posyf),round(_poszf) // プレイヤーが中途半端な位置にあった場合は整数位置にそろえる
+				players_posx.cnt=int(round(_posxf))
+				players_posy.cnt=int(round(_posyf))
+			loop
+			
+			dim players_nowdamaged,player_num // プレイヤーが今ステップでダメージを受けたかどうか(ダメージを受けた方向)
+			repeat player_num
+				players_nowdamaged.cnt=NONE
+			loop
+	
+			// プレイヤーの情報をtPlayer構造体の形に並べる
+			dim __prm,player_num*6
+			repeat player_num
+				__prm.(cnt*6)=players_posx.cnt,players_posy.cnt,players_direction.cnt/2,players_damage.cnt,players_jump_remain.cnt,players_attackcount.cnt
+			loop
+			
+			_prm=varptr(__prm)
+			
+			// 各キャラクタについてprocessAI()を呼ぶ
+			repeat player_num
+				dllproc "_processAI",_prm,1,players_instance.cnt
+				_stat=stat
+				// 落下判定
+				fall=0
+				if(players_posy.cnt<map_h-1){
+					if(mapchips.(players_posx.cnt).(players_posy.cnt+1)=-1){
+						fall=1
+						players_jump_remain.cnt=min(players_jump_remain.cnt,1) // 空中の場合はジャンプ可能回数を1回以下にする(v1.01追加)
+					}else:players_jump_remain.cnt=2
+				}else{
+					kill_player cnt
+					continue
+				}
+				switch _stat*(players_skip_remain.cnt<=0)
+				case 1 // 左へ移動
+					if(players_posx.cnt>0){
+						if((mapchips.(players_posx.cnt-1).(players_posy.cnt+fall)=-1)|(mapchips.(players_posx.cnt-1).(players_posy.cnt+fall)>=5)){
+							setevent objs_player.cnt,events_move.LEFT.fall.1,0
+						}else{
+							setevent objs_player.cnt,events_move_collision.LEFT.fall,0
+						}
+						players_direction.cnt=LEFT
+					}else:kill_player cnt
+					swbreak
+				case 2 // 右へ移動
+					if(players_posx.cnt<map_w-1){
+						if((mapchips.(players_posx.cnt+1).(players_posy.cnt+fall)=-1)|(mapchips.(players_posx.cnt+1).(players_posy.cnt+fall)>=5)){
+							setevent objs_player.cnt,events_move.RIGHT.fall.1,0
+						}else{
+							setevent objs_player.cnt,events_move_collision.RIGHT.fall,0
+						}
+						players_direction.cnt=RIGHT
+					}else:kill_player cnt
+					swbreak
+				case 3 // 左を向く
+					setevent objs_player.cnt,events_stepwait.fall,0
+					players_direction.cnt=LEFT
+					swbreak
+				case 4 // 右を向く
+					setevent objs_player.cnt,events_stepwait.fall,0
+					players_direction.cnt=RIGHT
+					swbreak
+				case 5 // ジャンプ
+					_cnt=cnt
+					if(players_jump_remain._cnt>0){
+						repeat 2
+							cnt_=2-cnt
+							_collision=0
+							repeat cnt_,1
+								if(players_posy._cnt>=cnt){
+									if((mapchips.(players_posx._cnt).(players_posy._cnt-cnt)>=0)&(mapchips.(players_posx._cnt).(players_posy._cnt-cnt)<5)){
+										// 通り抜け不可能な床が存在
+										_collision=1
+										break
+									}
+								}else{
+									kill_player _cnt
+									_collision=-1
+									break
+								}
+							loop
+							if(_collision=0){
+								setevent objs_player._cnt,events_move.UP.0.cnt_,0
+								break
+							}
+						loop
+						if(_collision>0):setevent objs_player.cnt,events_move_collision.UP.0,1 // ジャンプできなかった場合でも重力は無視
+						players_jump_remain._cnt--
+					}else:setevent objs_player.cnt,events_stepwait.fall,0
+					swbreak
+				case 6 // 降りる
+					if(mapchips.(players_posx.cnt).(players_posy.cnt+1)>=5){
+						setevent objs_player.cnt,events_move.DOWN.0.1,0
+					}else:setevent objs_player.cnt,events_move_collision.DOWN.fall,0
+					swbreak
+				case 7 // 攻撃
+					setevent objs_player.cnt,events_stepwait.fall,0
+					players_attacknow.cnt=1
+					regobj _objid,models_atkchip_attack.(players_direction.cnt)
+					setpos _objid,players_posx.cnt,players_posy.cnt,0.0f
+					setevent _objid,events_atkchip.(players_direction.cnt)
+					players_attackcount.cnt++
+					swbreak
+				case 8 // 防御
+					setevent objs_player.cnt,events_stepwait.fall,0
+					players_guardnow.cnt=0
+					if(players_guardstep.cnt=0){
+						players_guardstep.cnt=ATTACK_GUARD_STEP
+						players_guardnow.cnt=1
+						regobj _objid,models_guardchip.cnt,,events_guardchip.fall
+						setpos _objid,players_posx.cnt,players_posy.cnt,0.0f
+					}else:players_guardstep.cnt=max(players_guardstep.cnt-1,0)
+					swbreak
+				default // 待機
+					setevent objs_player.cnt,events_stepwait.fall,0
+					swbreak
+				swend
+				if(_stat!=7){
+					players_attackcount.cnt=0
+					players_attacknow.cnt=0
+				}
+				if(_stat!=8){
+					players_guardstep.cnt=max(players_guardstep.cnt-1,0)
+					players_guardnow.cnt=0
+				}
+				if(fall=1):players_attackcount.cnt=0
+				if(players_skip_remain.cnt>0):players_skip_remain.cnt--
+			loop
+			// 各プレイヤーの攻撃処理
+			repeat player_num
+				if(players_attacknow.cnt=1){
+					_cnt=cnt
+					// 攻撃対象のプレイヤーを決定
+					dim _target_enemies,player_num
+					_target_enemy_num=0
+					foreach _target_enemies
+						_target_enemies.cnt=-1
+					loop
+					repeat player_num
+						if(cnt=_cnt):continue
+						if(players_skip_remain.cnt>0):continue
+						if((players_guardnow.cnt=0)&(players_posx.cnt=players_posx._cnt+dir2diffx(players_direction._cnt))&(players_posy.cnt=players_posy._cnt+dir2diffy(players_direction._cnt))){
+							_target_enemies._target_enemy_num=cnt
+							_target_enemy_num++
+						}
+					loop
+					// 攻撃対象にダメージを与える
+					repeat _target_enemy_num
+						if(players_nowdamaged.(_target_enemies.cnt)=NONE){
+							players_lastattacker.(_target_enemies.cnt)=_cnt // 最後に攻撃したプレイヤーをポイント加算対象にする
+						}else{
+							players_lastattacker.(_target_enemies.cnt)=-1 // 同じプレイヤーに対して複数プレイヤーから同時に攻撃があった場合は、ポイント加算対象を特定しない
+						}
+						players_nowdamaged.(_target_enemies.cnt)=players_direction._cnt
+						players_damage.(_target_enemies.cnt)+=min(ATTACK_DAMAGE_MIN+ATTACK_DAMAGE_UP*players_attackcount._cnt,ATTACK_DAMAGE_MAX) // 連続攻撃回数に応じてダメージ
+						players_damaged_time.(_target_enemies.cnt)=time
+					loop
+				}
+			loop
+			// 各プレイヤーの被攻撃処理
+			// ダメージを受けた場合は(マップ外への自殺を除く)移動は取り消される
+			repeat player_num
+				if(players_nowdamaged.cnt!=NONE){
+					fall=0
+					if(players_posy.cnt<map_h-1){
+						if(mapchips.(players_posx.cnt).(players_posy.cnt+1)=-1){
+							fall=1
+						}
+					}
+					setevent objs_player.cnt,events_stepwait.fall,0
+					setevent objs_player.cnt,-1,1
+					setevent objs_player.cnt,-1,2
+					setevent objs_player.cnt,-1,3
+					_cnt=cnt
+					_collision=0 // 移動可能かどうか
+					_move_width=min((players_damage._cnt/25)*(players_damage._cnt/25),MAX_MOVE) // 吹っ飛び幅
+					repeat _move_width
+						cnt_=_move_width-cnt
+						_collision=0
+						repeat cnt_,1
+							if((players_posx._cnt+dir2diffx(players_nowdamaged._cnt)*cnt>=0)&(players_posx._cnt+dir2diffx(players_nowdamaged._cnt)*cnt<map_w)&(players_posy._cnt+dir2diffy(players_nowdamaged._cnt)*cnt>=0)&(players_posy._cnt+dir2diffy(players_nowdamaged._cnt)*cnt<map_h)){
+								if((mapchips.(players_posx._cnt+dir2diffx(players_nowdamaged._cnt)*cnt).(players_posy._cnt+dir2diffy(players_nowdamaged._cnt)*cnt)>=0)&(mapchips.(players_posx._cnt+dir2diffx(players_nowdamaged._cnt)*cnt).(players_posy._cnt+dir2diffy(players_nowdamaged._cnt)*cnt)<5)){
+									// 通り抜け不可能な床が存在
+									_collision=1
+									break
+								}
+							}else{
+								// 攻撃対象を画面外へ追いやってKILL(_collisionは1にしない)
+								break
+							}
+						loop
+						if(_collision=0){
+							setevent objs_player._cnt,events_move.(players_nowdamaged._cnt).0.cnt_,0
+							break
+						}
+					loop
+					// 横方向に吹っ飛ばない場合は上方向に飛ばす
+					if(_collision=1){
+						_cnt=cnt
+						repeat _move_width
+							cnt_=_move_width-cnt
+							_collision=0 // 移動可能かどうか
+							repeat cnt_,1
+								if((players_posx._cnt+dir2diffx(UP)*cnt>=0)&(players_posx._cnt+dir2diffx(UP)*cnt<map_w)&(players_posy._cnt+dir2diffy(UP)*cnt>=0)&(players_posy._cnt+dir2diffy(UP)*cnt<map_h)){
+									if((mapchips.(players_posx._cnt+dir2diffx(UP)*cnt).(players_posy._cnt+dir2diffy(UP)*cnt)>=0)&(mapchips.(players_posx._cnt+dir2diffx(UP)*cnt).(players_posy._cnt+dir2diffy(UP)*cnt)<5)){
+										// 通り抜け不可能な床が存在
+										_collision=1
+										break
+									}
+								}else{
+									// 攻撃対象を画面外へ追いやってKILL(_collisionは1にしない)
+									break
+								}
+							loop
+							if(_collision=0){
+								setevent objs_player._cnt,events_move.UP.0.cnt_,0
+								break
+							}
+						loop
+					}
+				}
+			loop
+			step++
+		}
+		// リザルト画面への遷移
+		if((STEP_MAX-step+START_WAITSTEP<=0)&(key_enter=1)&(keyprev_enter=0)){
+			/*texdel tex_mapbg
+			// プレイヤー関連のメモリ開放
+			repeat player_num
+				delobj objs_player.cnt
+			loop*/
+			repeat player_num
+				ll_libfree players_instance.cnt
+			loop
+			state=ST_RESULT
+			stateinit=1
+			skipdraw=1
+			keyprev_enter=1
+		}
+		swbreak
+	case ST_RESULT
+		// Enterキーが押された
+		if(((key_enter=1)&(keyprev_enter=0))|((key_a=1)&(keyprev_a=0))){
+			end
+		}
+		swbreak
+	default
+		dialog "異常なステート("+state+")"
+		end
+		swbreak
+	swend
+	return
+
+// プレイヤーをKILL
+#deffunc kill_player int p1,int p2
+	players_direction.p1=LEFT
+	players_damage.p1=0
+	if(players_lastattacker.p1>=0){
+		players_point.(players_lastattacker.p1)++
+		players_lastattacker.p1=-1
+	}
+	players_point.p1--
+	_map_returnposition_cnt=rnd(map_returnposition_num)
+	setpos objs_player.p1,map_returnpositions._map_returnposition_cnt\map_w,map_returnpositions._map_returnposition_cnt/map_w,0
+	players_jump_remain.p1=2
+	players_skip_remain.p1=3
+	player_killed_time=time
+	player_killed_direction=p2
+	return
+
+// 方向をX座標差分に変換
+#defcfunc dir2diffx int p1
+	return -1*(p1=0)+(p1=2)
+
+// 方向をY座標差分に変換
+#defcfunc dir2diffy int p1
+	return -1*(p1=1)+(p1=3)
+
+/*
+// ※HSPでのAI作成のみに使用(廃止)
+
+// モジュールのルーティング
+*routing_newmod
+	#define _ROUTING_NEWMOD mods_player
+	#addition "sources/terefami_routingmod.hsp"
+	#undef _ROUTING_NEWMOD
+	return
+
+*routing_call_processAI
+	#define _ROUTING_CALL_PROCESSAI
+	#addition "sources/terefami_routingmod.hsp"
+	#undef _ROUTING_CALL_PROCESSAI
+	return
+*/

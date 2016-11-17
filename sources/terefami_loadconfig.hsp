@@ -1,0 +1,57 @@
+// ########## 設定ファイルの読み込み(terefami_loadconfig.hsp) ##########
+
+// デフォルト値
+TIME_WAIT=25 : TIME_TRANSITION=500 : MODE_2D=1 : MODE_AUTOCAM=0 : TIME_AUTOCAM=500 : FRAME_STEP=10 : FRAME_WAIT=10 : START_WAITSTEP=6
+ATTACK_DAMAGE_MIN=3 : ATTACK_DAMAGE_MAX=9 : ATTACK_DAMAGE_UP=2 : ATTACK_GUARD_STEP=3 : STEP_MAX=360
+
+// config.iniから設定を読み込み
+notesel buf
+noteload "config.ini"
+repeat notemax
+	noteget _buf,cnt
+	if(strmid(_buf,0,10)="SCRSIZE_W="){
+		scrsize_w=int(strmid(_buf,10,256))
+	}
+	if(strmid(_buf,0,10)="SCRSIZE_H="){
+		scrsize_h=int(strmid(_buf,10,256))
+	}
+	if(strmid(_buf,0,10)="TIME_WAIT="){
+		TIME_WAIT=int(strmid(_buf,10,256))
+	}
+	if(strmid(_buf,0,16)="TIME_TRANSITION="){
+		TIME_TRANSITION=int(strmid(_buf,16,256))
+	}
+	if(strmid(_buf,0,8)="MODE_2D="){
+		MODE_2D=int(strmid(_buf,8,256))
+	}
+	if(strmid(_buf,0,13)="MODE_AUTOCAM="){
+		MODE_AUTOCAM=int(strmid(_buf,13,256))
+	}
+	if(strmid(_buf,0,13)="TIME_AUTOCAM="){
+		TIME_AUTOCAM=int(strmid(_buf,13,256))
+	}
+	if(strmid(_buf,0,11)="FRAME_STEP="){
+		FRAME_STEP=int(strmid(_buf,11,256))
+	}
+	if(strmid(_buf,0,11)="FRAME_WAIT="){
+		FRAME_WAIT=int(strmid(_buf,11,256))
+	}
+	if(strmid(_buf,0,15)="START_WAITSTEP="){
+		START_WAITSTEP=int(strmid(_buf,15,256))
+	}
+	if(strmid(_buf,0,18)="ATTACK_DAMAGE_MIN="){
+		ATTACK_DAMAGE_MIN=int(strmid(_buf,18,256))
+	}
+	if(strmid(_buf,0,18)="ATTACK_DAMAGE_MAX="){
+		ATTACK_DAMAGE_MAX=int(strmid(_buf,18,256))
+	}
+	if(strmid(_buf,0,17)="ATTACK_DAMAGE_UP="){
+		ATTACK_DAMAGE_UP=int(strmid(_buf,17,256))
+	}
+	if(strmid(_buf,0,18)="ATTACK_GUARD_STEP="){
+		ATTACK_GUARD_STEP=int(strmid(_buf,18,256))
+	}
+	if(strmid(_buf,0,9)="STEP_MAX="){
+		STEP_MAX=int(strmid(_buf,9,256))
+	}
+loop

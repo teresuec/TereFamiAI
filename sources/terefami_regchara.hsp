@@ -1,0 +1,28 @@
+// ########## ƒLƒƒƒ‰ƒNƒ^ŠÇ—(terefami_regchara.hsp) ##########
+
+dir_temp=dir_cur
+
+// ƒLƒƒƒ‰ƒNƒ^(AI)‚ğ—ñ‹“‚µ‚Ä“o˜^
+chdir "ai"
+
+dirlist _charas_dll,"*.dll"
+chara_num=stat
+
+if(chara_num>40){
+	dialog "AI“o˜^”‚ªãŒÀ(40ŒÂ)‚ğ’´‚¦‚Ä‚¢‚Ü‚·"
+}
+
+split _charas_dll,"\n",charas_dll
+
+dim charas_instance,chara_num
+sdim charas_name,256,chara_num
+sdim charas_imgfilename,256,chara_num
+repeat chara_num
+	ll_libload charas_instance.cnt,charas_dll.cnt
+	_prm=varptr(charas_name.cnt)
+	dllproc "_getName",_prm,1,charas_instance.cnt
+	_prm=varptr(charas_imgfilename.cnt)
+	dllproc "_getImgFilename",_prm,1,charas_instance.cnt
+loop
+
+chdir dir_temp
