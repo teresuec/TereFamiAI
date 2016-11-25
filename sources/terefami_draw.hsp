@@ -90,9 +90,9 @@
 	dim texs_selectmap_name,length(maps_name)
 	dim texs_selectmap_name_border,length(maps_name)
 	foreach maps_name
-		texmake 500/2*ZOOMRATE+6,17*ZOOMRATE*2+6
+		texmake 800/2*ZOOMRATE+6,17*ZOOMRATE*2+6
 		texs_selectmap_name.cnt=stat
-		texmake 500/2*ZOOMRATE+6,17*ZOOMRATE*2+6
+		texmake 800/2*ZOOMRATE+6,17*ZOOMRATE*2+6
 		texs_selectmap_name_border.cnt=stat
 		// マップ名の文字列の縁取りを黒色で描画
 		texopt ,,1
@@ -435,8 +435,8 @@
 		// マップ名を並べて表示
 		foreach maps_name
 			pos 40/2*ZOOMRATE,40/2*ZOOMRATE+80/2*ZOOMRATE*cnt
-			hgcopy_a texs_selectmap_name_border.cnt,0,0,400/2*ZOOMRATE*2+6,17*ZOOMRATE*2+6,3,128+127*(selnow=cnt)
-			hgcopy_a texs_selectmap_name.cnt,0,0,400/2*ZOOMRATE*2+6,17*ZOOMRATE*2+6,3,128+127*(selnow=cnt)
+			hgcopy_a texs_selectmap_name_border.cnt,0,0,800/2*ZOOMRATE+6,17*ZOOMRATE*2+6,3,128+127*(selnow=cnt)
+			hgcopy_a texs_selectmap_name.cnt,0,0,800/2*ZOOMRATE+6,17*ZOOMRATE*2+6,3,128+127*(selnow=cnt)
 		loop
 		pos 0,0
 		if(time<TIME_TRANSITION){
@@ -561,7 +561,7 @@
 
 // 画像を読み込む
 #defcfunc loadimage str filename,int zoommode
-	activeid=ginfo_act
+	activeid=ginfo_sel
 	exist filename
 	if(strsize=-1){
 		dialog "画像ファイルが見つかりません("+filename+")"
@@ -585,7 +585,7 @@
 
 // 背景画像を読み込む
 #defcfunc loadbgimage str filename,int zoommode
-	activeid=ginfo_act
+	activeid=ginfo_sel
 	exist filename
 	if(strsize=-1){
 		dialog "画像ファイルが見つかりません("+filename+")"

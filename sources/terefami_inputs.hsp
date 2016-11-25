@@ -51,6 +51,18 @@
 	getkey keys_arrow.UP,KEYID_UP
 	getkey keys_arrow.RIGHT,KEYID_RIGHT
 	getkey keys_arrow.DOWN,KEYID_DOWN
+	if(ginfo(2)!=0){
+		// ウィンドウ非アクティブ時に入力を無視する(v1.02)
+		key_a=0
+		key_b=0
+		key_enter=0
+		key_ctrl=0
+		key_esc=0
+		keys_arrow.LEFT=0
+		keys_arrow.UP=0
+		keys_arrow.RIGHT=0
+		keys_arrow.DOWN=0
+	}
 	
 	// 矢印キーの方向 1 つを決定
 	key_arrow=NONE

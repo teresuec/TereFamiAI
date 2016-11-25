@@ -124,6 +124,7 @@
 		endfl=0								// ゲーム終了フラグ
 		dim players_point,player_num		// プレイヤーの現在ポイント
 		dim players_skip_remain,player_num	// プレイヤーの残り強制待機ステップ数
+		dim players_killed_time,player_num	// プレイヤーのKILLされた時間
 		dim players_damage,player_num		// プレイヤーのダメージ％
 		dim players_jump_remain,player_num	// プレイヤーのジャンプ可能回数
 		dim players_direction,player_num	// プレイヤーの向き(左=0, 上=1, 右=2, 下=3)
@@ -418,7 +419,7 @@
 							players_lastattacker.(_target_enemies.cnt)=-1 // 同じプレイヤーに対して複数プレイヤーから同時に攻撃があった場合は、ポイント加算対象を特定しない
 						}
 						players_nowdamaged.(_target_enemies.cnt)=players_direction._cnt
-						players_damage.(_target_enemies.cnt)+=min(ATTACK_DAMAGE_MIN+ATTACK_DAMAGE_UP*players_attackcount._cnt,ATTACK_DAMAGE_MAX) // 連続攻撃回数に応じてダメージ
+						players_damage.(_target_enemies.cnt)+=min(ATTACK_DAMAGE_MIN+ATTACK_DAMAGE_UP*(players_attackcount._cnt-1),ATTACK_DAMAGE_MAX) // 連続攻撃回数に応じてダメージ
 						players_damaged_time.(_target_enemies.cnt)=time
 					loop
 				}
@@ -519,19 +520,22 @@
 
 // プレイヤーをKILL
 #deffunc kill_player int p1,int p2
-	players_direction.p1=LEFT
-	players_damage.p1=0
-	if(players_lastattacker.p1>=0){
-		players_point.(players_lastattacker.p1)++
-		players_lastattacker.p1=-1
+	if(players_killed_time.p1<time){
+		players_direction.p1=LEFT
+		players_damage.p1=0
+		if(players_lastattacker.p1>=0){
+			players_point.(players_lastattacker.p1)++
+			players_lastattacker.p1=-1
+		}
+		players_point.p1--
+		_map_returnposition_cnt=rnd(map_returnposition_num)
+		setpos objs_player.p1,map_returnpositions._map_returnposition_cnt\map_w,map_returnpositions._map_returnposition_cnt/map_w,0
+		players_jump_remain.p1=2
+		players_skip_remain.p1=3
+		player_killed_time=time
+		players_killed_time.p1=time
+		player_killed_direction=p2
 	}
-	players_point.p1--
-	_map_returnposition_cnt=rnd(map_returnposition_num)
-	setpos objs_player.p1,map_returnpositions._map_returnposition_cnt\map_w,map_returnpositions._map_returnposition_cnt/map_w,0
-	players_jump_remain.p1=2
-	players_skip_remain.p1=3
-	player_killed_time=time
-	player_killed_direction=p2
 	return
 
 // 方向をX座標差分に変換
