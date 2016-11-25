@@ -8,7 +8,7 @@
 
 // 各種情報(システム関連)
 #define GAME_NAME		"大奮闘テレッシュファミリーズAI"
-#define GAME_VERSION	"v1.01"
+#define GAME_VERSION	"v1.04"
 
 /*
 
@@ -29,7 +29,7 @@
 
 // 各種情報(ゲームバランス関連)
 #define ATTACK_DAMAGE_MIN	3	// 攻撃での最低ダメージ [標準値:3]
-#define ATTACK_DAMAGE_MAX	9	// 攻撃での最大ダメージ [標準値:6]
+#define ATTACK_DAMAGE_MAX	9	// 攻撃での最大ダメージ [標準値:9]
 #define ATTACK_DAMAGE_UP	2	// 連続攻撃でのダメージ上昇 [標準値:2]
 
 #define ATTACK_GUARD_STEP	3	// 防御の最低間隔ステップ数 [標準値:3]
@@ -64,6 +64,9 @@ scrsize_h=720		// ウィンドウの高さ (※config.iniからも読み込む)
 // 乱数発生の初期化
 randomize
 
+// config.iniから設定を読み込み
+#include "sources/terefami_loadconfig.hsp"
+
 // ウィンドウの初期化
 screen 0,scrsize_w,scrsize_h
 title GAME_NAME+" "+GAME_VERSION
@@ -72,9 +75,6 @@ title GAME_NAME+" "+GAME_VERSION
 hgsetreq SYSREQ_MAXOBJ, 4096
 hgsetreq SYSREQ_MAXEVENT, 8192
 hgini
-
-// config.iniから設定を読み込み
-#include "sources/terefami_loadconfig.hsp"
 
 // マップの読み込み
 #include "sources/terefami_regmap.hsp"
