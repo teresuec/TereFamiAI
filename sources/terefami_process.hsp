@@ -134,11 +134,14 @@
 		dim players_attacknow,player_num	// プレイヤーが現在攻撃しているか
 		dim players_guardnow,player_num		// プレイヤーが現在防御しているか
 		dim players_lastattacker,player_num // プレイヤーが最後に攻撃を受けた敵のID
+		dim players_killed_step,player_num	// プレイヤーが最後にKILLされた時間
+
 		repeat player_num
 			players_skip_remain.cnt=START_WAITSTEP
 			players_damaged_time.cnt=-10000
 			players_guardstep.cnt=ATTACK_GUARD_STEP
 			players_lastattacker.cnt=-1
+			players_killed_step.cnt=-10000
 		loop
 		player_killed_time=-10000		// プレイヤーが画面外に出てKILLされた時間
 		player_killed_direction=LEFT	// プレイヤーが画面外に出てKILLされた方向
@@ -250,16 +253,16 @@
 		}
 		swbreak
 	case ST_PLAYING
-		repeat player_num
-			getpos objs_player.cnt,_posxf,_posyf,_poszf
-			// 画面範囲外のプレイヤーをKILL
-			if(round(_posxf)<0):kill_player cnt,LEFT:continue
-			if(round(_posxf)>map_w-1):kill_player cnt,RIGHT:continue
-			if(round(_posyf)<0):kill_player cnt,UP:continue
-			if(round(_posyf)>map_h-1):kill_player cnt,DOWN:continue
-		loop
 		// ステップの実行
 		if((frame\(FRAME_STEP+FRAME_WAIT)=0)&(STEP_MAX-step+START_WAITSTEP>0)){
+			repeat player_num
+				getpos objs_player.cnt,_posxf,_posyf,_poszf
+				// 画面範囲外のプレイヤーをKILL
+				if(round(_posxf)<0):kill_player cnt,LEFT:continue
+				if(round(_posxf)>map_w-1):kill_player cnt,RIGHT:continue
+				if(round(_posyf)<0):kill_player cnt,UP:continue
+				if(round(_posyf)>map_h-1):kill_player cnt,DOWN:continue
+			loop
 			// 各プレイヤーの位置を取得
 			dim players_posx,player_num
 			dim players_posy,player_num
@@ -287,6 +290,7 @@
 			repeat player_num
 				dllproc "_processAI",_prm,1,players_instance.cnt
 				_stat=stat
+				if(players_killed_step.cnt=step):continue
 				// 落下判定
 				fall=0
 				if(players_posy.cnt<map_h-1){
@@ -520,7 +524,7 @@
 
 // プレイヤーをKILL
 #deffunc kill_player int p1,int p2
-	if(players_killed_time.p1<time){
+	if(players_killed_step.p1<step){
 		players_direction.p1=LEFT
 		players_damage.p1=0
 		if(players_lastattacker.p1>=0){
@@ -533,7 +537,7 @@
 		players_jump_remain.p1=2
 		players_skip_remain.p1=3
 		player_killed_time=time
-		players_killed_time.p1=time
+		players_killed_step.p1=step
 		player_killed_direction=p2
 	}
 	return
