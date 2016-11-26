@@ -8,7 +8,7 @@
 
 // 各種情報(システム関連)
 #define GAME_NAME		"大奮闘テレッシュファミリーズAI"
-#define GAME_VERSION	"v1.04"
+#define GAME_VERSION	"v1.05"
 
 /*
 
